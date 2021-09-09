@@ -649,6 +649,9 @@ class AOProtocol(asyncio.Protocol):
             msg = self.client.shake_message(msg)
         if self.client.disemvowel:
             msg = self.client.disemvowel_message(msg)
+        # Added by AwesomeAim
+		if self.client.typo:
+			msg = self.client.typo_message(msg)
         if evidence:
             evi = self.client.area.evi_list.evidences[
                     self.client.evi_list[evidence] - 1]
@@ -929,6 +932,9 @@ class AOProtocol(asyncio.Protocol):
             args[1] = self.client.shake_message(args[1])
         if self.client.disemvowel:
             args[1] = self.client.disemvowel_message(args[1])
+        # Added by AwesomeAim
+		if self.client.typo:
+			args[1] = self.client.typo_message(args[1])
         self.client.area.send_command('CT', name, args[1])
         self.client.area.send_owner_command(
             'CT',
