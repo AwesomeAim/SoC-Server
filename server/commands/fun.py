@@ -8,7 +8,9 @@ __all__ = [
     'ooc_cmd_disemvowel',
     'ooc_cmd_undisemvowel',
     'ooc_cmd_shake',
-    'ooc_cmd_unshake'
+    'ooc_cmd_unshake',
+    'ooc_cmd_typo',
+    'ooc_cmd_untypo'
 ]
 
 
@@ -97,5 +99,49 @@ def ooc_cmd_unshake(client, arg):
             database.log_area('unshake', client, client.area, target=c)
             c.shaken = False
         client.send_ooc(f'Unshook {len(targets)} existing client(s).')
+    else:
+        client.send_ooc('No targets found.')
+
+# Added by AwesomeAim	
+@mod_only()
+def ooc_cmd_typo(client, arg):
+    """
+    Force a typo in a user's messages.
+    Usage: /typo <id>
+    """
+    if len(arg) == 0:
+        raise ArgumentError('You must specify a target.')
+    try:
+        targets = client.server.client_manager.get_targets(
+            client, TargetType.ID, int(arg), False)
+    except:
+        raise ArgumentError('You must specify a target. Use /typo <id>.')
+    if targets:
+        for c in targets:
+            database.log_area('typo', client, client.area, target=c)
+            c.typo = True
+        client.send_ooc(f'Typo\'d {len(targets)} existing client(s).')
+    else:
+        client.send_ooc('No targets found.')
+
+
+@mod_only()
+def ooc_cmd_untypo(client, arg):
+    """
+    Allow the user to make their own typos again.
+    Usage: /untypo <id>
+    """
+    if len(arg) == 0:
+        raise ArgumentError('You must specify a target.')
+    try:
+        targets = client.server.client_manager.get_targets(
+            client, TargetType.ID, int(arg), False)
+    except:
+        raise ArgumentError('You must specify a target. Use /untypo <id>.')
+    if targets:
+        for c in targets:
+            database.log_area('untypo', client, client.area, target=c)
+            c.typo = False
+        client.send_ooc(f'Untypo\'d {len(targets)} existing client(s).')
     else:
         client.send_ooc('No targets found.')
