@@ -57,6 +57,7 @@ class ClientManager:
             self.evi_list = []
             self.disemvowel = False
             self.shaken = False
+            self.typo = False
             self.charcurse = []
             self.muted_global = False
             self.muted_adverts = False
@@ -1216,6 +1217,18 @@ class ClientManager:
             parts = message.split()
             random.shuffle(parts)
             return ' '.join(parts)
+        # Added by AwesomeAim
+		def typo_message(self, message):
+			"""Create a typo in a chat message"""
+			import random
+			if len(message)<5:
+				return message
+			else:
+				first = random.randrange(0,len(message)-2)
+				second = first+1
+				lst = list(message)
+				lst[first], lst[second] = lst[second], lst[first]
+				return ''.join(lst)
 
     def __init__(self, server):
         self.clients = set()
