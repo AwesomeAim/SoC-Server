@@ -9,7 +9,7 @@ __all__ = [
     'ooc_cmd_undisemvowel',
     'ooc_cmd_shake',
     'ooc_cmd_unshake',
-	'ooc_cmd_typo',
+    'ooc_cmd_typo',
     'ooc_cmd_untypo'
 ]
 
@@ -101,7 +101,8 @@ def ooc_cmd_unshake(client, arg):
         client.send_ooc(f'Unshook {len(targets)} existing client(s).')
     else:
         client.send_ooc('No targets found.')
-		
+
+# Added by AwesomeAim	
 @mod_only()
 def ooc_cmd_typo(client, arg):
     """

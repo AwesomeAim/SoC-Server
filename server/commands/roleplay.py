@@ -10,6 +10,7 @@ from server.constants import TargetType
 from server.exceptions import ClientError, ServerError, ArgumentError
 
 from . import mod_only
+from .. import commands
 
 __all__ = [
     'ooc_cmd_roll',
@@ -422,15 +423,19 @@ def ooc_cmd_8ball(client, arg):
 
 def ooc_cmd_timer(client, arg):
     """
-    Manage a countdown timer in the current area. Note that timer of ID 0 is hub-wide. All other timer ID's are local to area.
+    Manage a countdown timer in the current area. Note that timer of ID `0` is hub-wide. All other timer ID's are local to area.
+    Anyone can check ongoing timers, their status and time left using `/timer <id>`, so `/timer 0`.
+    `[time]` can be formated as `10m5s` for 10 minutes 5 seconds, `1h30m` for 1 hour 30 minutes, etc.
+    You can optionally add or subtract time, like so: `/timer 0 +5s` to add `5` seconds to timer id `0`.
+    `start` starts the previously set timer, so `/timer 0 start`.
+    `pause` OR `stop` pauses the timer that's currently running, so `/timer 0 pause`.
+    `unset` OR `hide` hides the timer for it to no longer show up, so `/timer 0 hide`.
     Usage:
-    /timer <id> [+/-][time]
-        Set the timer's time, optionally adding or subtracting time. If the timer had
-        not been previously set up, it will be shown paused.
-        <id> can be between 0 and 4.
+    /timer <id> [+][time]
     /timer <id> start
     /timer <id> <pause|stop>
     /timer <id> hide
+    /timer <id> /
     """
 
     arg = arg.split()
@@ -461,7 +466,7 @@ def ooc_cmd_timer(client, arg):
     # Type 3 = hide timer
     # Value = Time to set on the timer
     timer_id = int(arg[0])
-    if timer_id < 0 or timer_id > 4:
+    if timer_id < 0 or timer_id > 20:
         raise ArgumentError('Invalid ID. Usage: /timer <id>')
     if timer_id == 0:
         timer = client.area.area_manager.timer
@@ -486,12 +491,12 @@ def ooc_cmd_timer(client, arg):
     if duration is not None:
         if timer.set:
             if timer.started:
-                if not (arg[1] == '+' or duration < 0):
+                if not (arg[1] == '+' or arg[1][0] == '+' or duration < 0):
                     timer.target = arrow.get()
                 timer.target = timer.target.shift(seconds=duration)
                 timer.static = timer.target - arrow.get()
             else:
-                if not (arg[1] == '+' or duration < 0):
+                if not (arg[1] == '+' or arg[1][0] == '+' or duration < 0):
                     timer.static = datetime.timedelta(0)
                 timer.static += datetime.timedelta(seconds=duration)
         else:
@@ -504,11 +509,12 @@ def ooc_cmd_timer(client, arg):
 
     if not timer.set:
         raise ArgumentError(f'Timer {timer_id} is not set in this area.')
-    elif arg[1] == 'start':
+
+    if arg[1] == 'start' and not timer.started:
         timer.target = timer.static + arrow.get()
         timer.started = True
         client.send_ooc(f'Starting timer {timer_id}.')
-    elif arg[1] in ('pause', 'stop'):
+    elif arg[1] in ('pause', 'stop') and timer.started:
         timer.static = timer.target - arrow.get()
         timer.started = False
         client.send_ooc(f'Stopping timer {timer_id}.')
@@ -522,6 +528,31 @@ def ooc_cmd_timer(client, arg):
             client.area.area_manager.send_command('TI', timer_id, 3)
         else:
             client.area.send_command('TI', timer_id, 3)
+    elif arg[1][0] == '/':
+        full = ' '.join(arg[1:])[1:]
+        if full == '':
+            txt = f'Timer {timer_id} commands:'
+            for command in timer.commands:
+                txt += f'  \n/{command}'
+            txt += '\nThey will be called once the timer expires.'
+            client.send_ooc(txt)
+            return
+        if full.lower() == 'clear':
+            timer.commands.clear()
+            client.send_ooc(f'Clearing all commands for Timer {timer_id}.')
+            return
+
+        cmd = full.split(' ')[0]
+        called_function = f'ooc_cmd_{cmd}'
+        if len(client.server.command_aliases) > 0 and not hasattr(commands, called_function):
+            if cmd in client.server.command_aliases:
+                called_function = f'ooc_cmd_{client.server.command_aliases[cmd]}'
+        if not hasattr(commands, called_function):
+            client.send_ooc(f'[Timer {timer_id}] Invalid command: {cmd}. Use /help to find up-to-date commands.')
+            return
+        timer.commands.append(full)
+        client.send_ooc(f'Adding command to Timer {timer_id}: /{full}')
+        return
 
     # Send static time if applicable
     if timer.set:
@@ -533,21 +564,14 @@ def ooc_cmd_timer(client, arg):
             client.area.send_command('TI', timer_id, s, static_time)
         client.send_ooc(f'Timer {timer_id} is at {timer.static}')
 
-        target = client.area
         if timer_id == 0:
-            target = client.area.area_manager
-        def timer_expired():
-            if timer.schedule:
-                timer.schedule.cancel()
-            # Either the area or the hub was destroyed at some point
-            if target == None or timer == None:
-                return
-            target.broadcast_ooc(f'Timer {timer_id} has expired.')
-            timer.static = datetime.timedelta(0)
-            timer.started = False
+            timer.hub = client.area.area_manager
+        else:
+            timer.area = client.area
 
+        timer.caller = client
         if timer.schedule:
             timer.schedule.cancel()
         if timer.started:
             timer.schedule = asyncio.get_event_loop().call_later(
-                int(timer.static.total_seconds()), timer_expired)
+                int(timer.static.total_seconds()), timer.timer_expired)

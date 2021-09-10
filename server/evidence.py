@@ -128,6 +128,16 @@ class EvidenceList:
             self.evidences.append(self.Evidence(
                 name, description, image, pos))
 
+        id = len(self.evidences)
+        # Inform the CMs of evidence manupulation
+        client.area.send_owner_command('CT', client.server.config['hostname'],
+                f'[{client.id}] {client.showname} added evidence {id}: {name} in area [{client.area.id}] {client.area.name}.', '1')
+        # send_owner_command does not tell CMs present in the area about evidence manipulation, so let's do that manually
+        for c in client.area.owners:
+            if c in client.area.clients:
+                c.send_command('CT', client.server.config['hostname'], 
+                        f'[{client.id}] {client.showname} added evidence {id}: {name} in this area.', '1')
+
     def evidence_swap(self, client, id1, id2):
         """
         Swap two evidence items.
@@ -141,6 +151,15 @@ class EvidenceList:
 
         self.evidences[id1], self.evidences[id2] = self.evidences[
             id2], self.evidences[id1]
+
+        # Inform the CMs of evidence manupulation
+        client.area.send_owner_command('CT', client.server.config['hostname'],
+                f'[{client.id}] {client.showname} swapped evidence {id1+1}: {self.evidences[id1].name} with {id2+1}: {self.evidences[id2].name} in area [{client.area.id}] {client.area.name}.', '1')
+        # send_owner_command does not tell CMs present in the area about evidence manipulation, so let's do that manually
+        for c in client.area.owners:
+            if c in client.area.clients:
+                c.send_command('CT', client.server.config['hostname'], 
+                        f'[{client.id}] {client.showname} swapped evidence {id1+1}: {self.evidences[id1].name} with {id2+1}: {self.evidences[id2].name} in this area.', '1')
 
     def create_evi_list(self, client):
         """
@@ -193,6 +212,16 @@ class EvidenceList:
         if client.area.dark:
             return
         evi = self.evidences[id]
+
+        # Inform the CMs of evidence manupulation
+        client.area.send_owner_command('CT', client.server.config['hostname'],
+                f'[{client.id}] {client.showname} deleted evidence {id+1}: {evi.name} in area [{client.area.id}] {client.area.name}.', '1')
+        # send_owner_command does not tell CMs present in the area about evidence manipulation, so let's do that manually
+        for c in client.area.owners:
+            if c in client.area.clients:
+                c.send_command('CT', client.server.config['hostname'], 
+                        f'[{client.id}] {client.showname} deleted evidence {id+1}: {evi.name} in this area.', '1')
+
         if not client in client.area.owners and not client.is_mod:
             id = client.evi_list[id+1]-1
             evi = self.evidences[id]
@@ -223,7 +252,9 @@ class EvidenceList:
             return
         if client.area.dark:
             return
+
         if client in client.area.owners or client.is_mod:
+            old_name = self.evidences[id].name
             if client.area.evidence_mod == 'HiddenCM':
                 if self.correct_format(client, arg[1]):
                     lines = arg[1].split('\n')
@@ -241,11 +272,21 @@ class EvidenceList:
             # Server sends evidence to client in an indexed list starting from 1.
             # Client sends evidence updates to server using an index starting from 0.
             # This needs a complete overhaul.
-            idx = client.evi_list[id+1]-1
+            id = client.evi_list[id+1]-1
+            old_name = self.evidences[id].name
             # c = self.evidences[idx].hiding_client
             # if c != None:
             #     c.hide(False)
             #     c.area.broadcast_area_list(c)
             #     client.send_ooc(f'You discover {c.showname} in the {self.evidences[idx].name}!')
-            self.evidences[idx] = self.Evidence(
-                arg[0], arg[1], arg[2], self.evidences[idx].pos)
+            self.evidences[id] = self.Evidence(
+                arg[0], arg[1], arg[2], self.evidences[id].pos)
+
+        # Inform the CMs of evidence manupulation
+        client.area.send_owner_command('CT', client.server.config['hostname'],
+                f'[{client.id}] {client.showname} edited evidence {id+1}: {old_name} in area [{client.area.id}] {client.area.name}.', '1')
+        # send_owner_command does not tell CMs present in the area about evidence manipulation, so let's do that manually
+        for c in client.area.owners:
+            if c in client.area.clients:
+                c.send_command('CT', client.server.config['hostname'], 
+                        f'[{client.id}] {client.showname} edited evidence {id+1}: {old_name} in this area.', '1')

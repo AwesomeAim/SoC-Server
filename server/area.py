@@ -25,10 +25,14 @@ from enum import Enum
 
 import oyaml as yaml #ordered yaml
 import os
+import datetime
+import logging
+logger = logging.getLogger('events')
 
 from server import database
+from server import commands
 from server.evidence import EvidenceList
-from server.exceptions import AreaError
+from server.exceptions import ClientError, AreaError, ArgumentError, ServerError
 from server.constants import MusicEffect
 
 from collections import OrderedDict
@@ -36,12 +40,69 @@ from collections import OrderedDict
 class Area:
     class Timer:
         """Represents a single instance of a timer in the area."""
-        def __init__(self, Set = False, started = False, static = None, target = None):
+        def __init__(self, _id, Set = False, started = False, static = None, target = None, area = None, caller = None):
+            self.id = _id
             self.set = Set
             self.started = started
             self.static = static
             self.target = target
+            self.area = area
+            self.caller = caller
             self.schedule = None
+            self.commands = []
+        
+        def timer_expired(self):
+            if self.schedule:
+                self.schedule.cancel()
+            # Either the area or the hub was destroyed at some point
+            if self.area == None or self == None:
+                return
+            self.area.broadcast_ooc(f'Timer {self.id+1} has expired.')
+            self.call_commands()
+            self.commands.clear()
+            self.static = datetime.timedelta(0)
+            self.started = False
+
+        def call_commands(self):
+            if self.caller == None:
+                return
+            if self.area == None or self == None:
+                return
+            if self.caller not in self.area.owners:
+                return
+            server = self.caller.server
+            # Prepare for disgusting hacks
+            dummy_client = server.client_manager.Client(server, self.caller.transport, -1, self.caller.ipid)
+            dummy_client.server = server
+            dummy_client.area = self.area
+            dummy_client.area._owners.add(dummy_client)
+            dummy_client.name = f'[Timer] {self.caller.name}'
+            dummy_client.showname = f'[Timer] {self.caller.name}'
+            dummy_client.remote_listen = 0
+            for cmd in self.commands:
+                spl = cmd.split(' ', 1)
+                cmd = spl[0].lower()
+                arg = ''
+                if len(spl) == 2:
+                    arg = spl[1][:1024]
+                try:
+                    called_function = f'ooc_cmd_{cmd}'
+                    if len(server.command_aliases) > 0 and not hasattr(commands, called_function):
+                        if cmd in server.command_aliases:
+                            called_function = f'ooc_cmd_{server.command_aliases[cmd]}'
+                    if not hasattr(commands, called_function):
+                        dummy_client.send_ooc(f'[Timer {self.id}] Invalid command: {cmd}. Use /help to find up-to-date commands.')
+                        return
+                    getattr(commands, called_function)(dummy_client, arg)
+                except (ClientError, AreaError, ArgumentError, ServerError) as ex:
+                    dummy_client.send_ooc(f'[Timer {self.id}] {ex}')
+                except Exception as ex:
+                    dummy_client.send_ooc(f'[Timer {self.id}] An internal error occurred: {ex}. Please inform the staff of the server about the issue.')
+                    logger.exception('Exception while running a command')
+            self.caller.transport = dummy_client.transport
+            dummy_client.transport = None
+            dummy_client.area._owners.remove(dummy_client)
+            del dummy_client
 
     """Represents a single instance of an area."""
     def __init__(self,
@@ -160,9 +221,9 @@ class Area:
         # Dictionary of dictionaries with further info, examine def link for more info
         self.links = {}
 
-        # Timers ID 1 thru 4, (indexes 0 to 3 in area), timer ID 0 is reserved for hubs.
+        # Timers ID 1 thru 20, (indexes 0 to 19 in area), timer ID 0 is reserved for hubs.
         self.timers = [
-            self.Timer() for x in range(4)
+            self.Timer(x) for x in range(20)
         ]
 
     @property
@@ -293,8 +354,9 @@ class Area:
             self.desc = area['desc']
             self.o_desc = self.desc
         if 'music_ref' in area:
-            self.clear_music()
             self.music_ref = area['music_ref']
+            if self.music_ref == '':
+                self.clear_music()
         if self.music_ref != '':
             self.load_music(f'storage/musiclists/{self.music_ref}.yaml')
             
@@ -1214,6 +1276,7 @@ class Area:
                 self.password = ''
             if self.muted:
                 self.unmute()
+                self.broadcast_ooc('This area is no longer muted.')
             self.name = self.o_name
             self.doc = self.o_doc
             self.desc = self.o_desc

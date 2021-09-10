@@ -24,9 +24,13 @@ from enum import Enum
 
 import oyaml as yaml #ordered yaml
 import os
+import datetime
+import logging
+logger = logging.getLogger('events')
 
 from server import database
-from server.exceptions import AreaError
+from server import commands
+from server.exceptions import ClientError, AreaError, ArgumentError, ServerError
 
 from server.area import Area
 
@@ -36,12 +40,68 @@ class AreaManager:
     """Holds the list of all areas."""
     class Timer:
         """Represents a single instance of a timer in the area."""
-        def __init__(self, Set = False, started = False, static = None, target = None):
+        def __init__(self, Set = False, started = False, static = None, target = None, hub = None, caller = None):
             self.set = Set
             self.started = started
             self.static = static
             self.target = target
+            self.hub = hub
+            self.caller = caller
             self.schedule = None
+            self.commands = []
+        
+        def timer_expired(self):
+            if self.schedule:
+                self.schedule.cancel()
+            # the hub was destroyed at some point
+            if self.hub == None or self == None:
+                return
+            self.hub.broadcast_ooc('Timer 0 has expired.')
+            self.call_commands()
+            self.commands.clear()
+            self.static = datetime.timedelta(0)
+            self.started = False
+
+        def call_commands(self):
+            if self.caller == None:
+                return
+            if self.hub == None or self == None:
+                return
+            if self.caller not in self.hub.owners:
+                return
+            server = self.caller.server
+            # Prepare for disgusting hacks
+            dummy_client = server.client_manager.Client(server, self.caller.transport, -1, self.caller.ipid)
+            dummy_client.server = server
+            dummy_client.area = self.hub.default_area()
+            dummy_client.area._owners.add(dummy_client)
+            dummy_client.name = f'[Timer] {self.caller.name}'
+            dummy_client.showname = f'[Timer] {self.caller.name}'
+            dummy_client.remote_listen = 0
+            for cmd in self.commands:
+                spl = cmd.split(' ', 1)
+                cmd = spl[0].lower()
+                arg = ''
+                if len(spl) == 2:
+                    arg = spl[1][:1024]
+                try:
+                    called_function = f'ooc_cmd_{cmd}'
+                    if len(server.command_aliases) > 0 and not hasattr(commands, called_function):
+                        if cmd in server.command_aliases:
+                            called_function = f'ooc_cmd_{server.command_aliases[cmd]}'
+                    if not hasattr(commands, called_function):
+                        dummy_client.send_ooc(f'[Timer 0] Invalid command: {cmd}. Use /help to find up-to-date commands.')
+                        return
+                    getattr(commands, called_function)(dummy_client, arg)
+                except (ClientError, AreaError, ArgumentError, ServerError) as ex:
+                    dummy_client.send_ooc(f'[Timer 0] {ex}')
+                except Exception as ex:
+                    dummy_client.send_ooc(f'[Timer 0] An internal error occurred: {ex}. Please inform the staff of the server about the issue.')
+                    logger.exception('Exception while running a command')
+            self.caller.transport = dummy_client.transport
+            dummy_client.transport = None
+            dummy_client.area._owners.remove(dummy_client)
+            del dummy_client
 
     def __init__(self, hub_manager, name):
         self.hub_manager = hub_manager
@@ -149,6 +209,11 @@ class AreaManager:
         for entry in list(set(load_list) - set(ignore)):
             if entry in hub:
                 setattr(self, entry, hub[entry])
+                if entry == 'music_ref':
+                    if hub[entry] == '':
+                        self.clear_music()
+                    else:
+                        self.load_music(f'storage/musiclists/{self.music_ref}.yaml')
 
         if not ('character_data' in ignore) and 'character_data' in hub:
             try:
@@ -380,6 +445,7 @@ class AreaManager:
 
         self.broadcast_ooc(
             f'[{client.id}] {client.showname} ({client.name}) is GM in this hub now.')
+        client.hide(True)
 
     def remove_owner(self, client):
         """
@@ -401,6 +467,7 @@ class AreaManager:
 
         self.broadcast_ooc(
             f'[{client.id}] {client.showname} ({client.name}) is no longer GM in this hub.')
+        client.hide(False)
 
     def get_gms(self):
         """
@@ -472,7 +539,7 @@ class AreaManager:
         """Broadcast ARUP packet containing player counts."""
         if not self.arup_enabled:
             return
-        players_list = [0]
+        players_list = [0, -1]
         if clients==None:
             clients = self.clients
         for client in clients:
@@ -487,7 +554,7 @@ class AreaManager:
         """Broadcast ARUP packet containing area statuses."""        
         if not self.arup_enabled:
             return
-        status_list = [1]
+        status_list = [1, 'GAMING']
         if clients==None:
             clients = self.clients
         for client in clients:
@@ -502,7 +569,7 @@ class AreaManager:
         """Broadcast ARUP packet containing area CMs."""
         if not self.arup_enabled:
             return        
-        cms_list = [2]
+        cms_list = [2, 'Double-Click me']
         if clients==None:
             clients = self.clients
         for client in clients:
@@ -517,7 +584,7 @@ class AreaManager:
         """Broadcast ARUP packet containing the lock status of each area."""
         if not self.arup_enabled:
             return        
-        lock_list = [3]
+        lock_list = [3, '_______']
         if clients==None:
             clients = self.clients
         for client in clients:

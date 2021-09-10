@@ -284,7 +284,6 @@ class AOProtocol(asyncio.Protocol):
                                      *self.server.music_pages_ao1[args[0]])
         else:
             self.client.send_done()
-            self.client.send_area_list()
             self.client.send_motd()
             self.client.send_hub_info()
 
@@ -305,10 +304,17 @@ class AOProtocol(asyncio.Protocol):
         """
 
         song_list = []
+        if not self.client.area.area_manager.arup_enabled:
+            song_list = ['{ Areas }\n Double-Click me to see Hubs\n  _______']
+        else:
+            song_list = ['{ Areas }']
         allowed = self.client.is_mod or self.client in self.client.area.owners
         area_list = self.client.get_area_list(allowed, allowed)
         self.client.local_area_list = area_list
-        song_list += [a.name for a in area_list]
+        if not self.client.area.area_manager.arup_enabled:
+            song_list += [f'[{a.id}] {a.name}' for a in area_list]
+        else:
+            song_list += [a.name for a in area_list]
         self.client.local_music_list = self.server.music_list
         song_list += self.server.music_list_ao2
 
@@ -322,7 +328,6 @@ class AOProtocol(asyncio.Protocol):
         """
 
         self.client.send_done()
-        self.client.send_area_list()
         self.client.send_motd()
         self.client.send_hub_info()
         # TODO: move this code to the area itself so it can handle whatever it needs to later
@@ -945,8 +950,33 @@ class AOProtocol(asyncio.Protocol):
         """
         if not self.client.is_checked:
             return
+
+        if args[0].split('\n')[0] == "{ Areas }":
+            # self.client.send_ooc('Switching to the list of Hubs...')
+            self.client.viewing_hub_list = True
+            preflist = self.client.server.supported_features.copy()
+            preflist.remove('arup')
+            self.client.send_command('FL', *preflist)
+            self.client.send_command('FA', *['{ Hubs }\n Double-Click me to see Areas\n  _______', *[f'[{hub.id}] {hub.name}' for hub in self.client.server.hub_manager.hubs]])
+            return
+        if args[0].split('\n')[0] == "{ Hubs }":
+            # self.client.send_ooc('Switching to the list of Areas...')
+            self.client.viewing_hub_list = False
+            preflist = self.client.server.supported_features.copy()
+            if not self.client.area.area_manager.arup_enabled:
+                preflist.remove('arup')
+            self.client.send_command('FL', *preflist)
+            self.client.reload_area_list(self.client.local_area_list)
+            self.client.area.area_manager.send_arup_players([self.client])
+            self.client.area.area_manager.send_arup_status([self.client])
+            self.client.area.area_manager.send_arup_cms([self.client])
+            self.client.area.area_manager.send_arup_lock([self.client])
+            return
+
         try:
             called_function = 'ooc_cmd_area'
+            if self.client.viewing_hub_list:
+                called_function = 'ooc_cmd_hub'
             # We can get cheeky and spoof ARUP info with normal song names
             getattr(commands, called_function)(self.client, args[0].split('\n')[0])
         except AreaError:
@@ -954,7 +984,7 @@ class AOProtocol(asyncio.Protocol):
                 if not self.validate_net_cmd(args, self.ArgType.STR, self.ArgType.INT, self.ArgType.STR_OR_EMPTY):
                     if not self.validate_net_cmd(args, self.ArgType.STR, self.ArgType.INT, self.ArgType.STR_OR_EMPTY, self.ArgType.INT):
                         return
-            self.client.change_music(args)
+            self.client.change_music(*args)
         except ClientError as ex:
             self.client.send_ooc(ex)
 

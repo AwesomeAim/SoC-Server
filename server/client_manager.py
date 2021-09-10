@@ -143,6 +143,8 @@ class ClientManager:
             self.replace_music = False
             # list of areas to broadcast the message, music and judge buttons to
             self.broadcast_list = []
+            # Whether we're viewing hub list or not in the A/M area list
+            self.viewing_hub_list = False
 
         def send_raw_message(self, msg):
             """
@@ -188,7 +190,7 @@ class ClientManager:
             """Send the hub info to the client."""
             info = self.area.area_manager.info
             if info != '':
-                self.send_ooc(f'=== HUB INFO ===\r\n{info}\r\n=============')
+                self.send_ooc(f'=== HUB [{self.area.area_manager.id}] {self.area.area_manager.name} INFO ===\r\n{info}\r\n=============')
 
         def send_player_count(self):
             """
@@ -299,7 +301,7 @@ class ClientManager:
             self.mus_change_time[self.mus_counter] = time.time()
             return 0
 
-        def change_music(self, args):
+        def change_music(self, song, cid, showname='', effects=0, loop=True):
             if self.is_muted:  # Checks to see if the client has been muted by a mod
                 self.send_ooc(
                     'You are muted by a moderator.')
@@ -308,16 +310,24 @@ class ClientManager:
                 self.send_ooc(
                     'You were blockdj\'d by a moderator.')
                 return
-
-            if args[1] != self.char_id:
+            if cid != self.char_id:
                 return
 
             try:
-                if args[0] == "~stop.mp3" or self.server.get_song_is_category(self.construct_music_list(), args[0]):
+                if song == "~stop.mp3" or self.server.get_song_is_category(self.construct_music_list(), song):
                     name, length = "~stop.mp3", 0
                 else:
-                    name, length = self.server.get_song_data(
-                        self.construct_music_list(), args[0])
+                    try:
+                        name, length = self.server.get_song_data(
+                            self.construct_music_list(), song)
+                    except ServerError:
+                        if self.is_mod or self in self.area.owners:
+                            name = song
+                            length = -1
+                        else:
+                            raise
+                if not loop:
+                    length = 0
 
                 target_areas = [self.area]
                 if len(self.broadcast_list) > 0 and (self.is_mod or self in self.area.owners):
@@ -350,9 +360,7 @@ class ClientManager:
                             self.edit_ambinece = False
 
                     # Showname info
-                    showname = ''
-                    if len(args) > 2:
-                        showname = args[2]
+                    if showname != '':
                         if len(showname) > 0 and not area.showname_changes_allowed and not self.is_mod and not self in area.owners:
                             self.send_ooc(
                                 f'Showname changes are forbidden in area [{area.id}] {area.name}!'
@@ -360,9 +368,7 @@ class ClientManager:
                             continue
 
                     # Effects info
-                    effects = 0
-                    if len(args) > 3:
-                        effects = int(args[3])
+                    effects = int(effects)
                     
                     # Jukebox check
                     if area.jukebox and not self.is_mod and not self in area.owners:
@@ -382,9 +388,9 @@ class ClientManager:
                 database.log_area('music', self, self.area, message=name)
             except ServerError:
                 if self.music_ref != '':
-                    self.send_ooc(f'Error: song {args[0]} was not accepted! View acceptable music by resetting your client\'s using /musiclist.')
+                    self.send_ooc(f'Error: song {song} was not accepted! View acceptable music by resetting your client\'s using /musiclist.')
                 else:
-                    self.send_ooc(f'Error: song {args[0]} isn\'t recognized by server!')
+                    self.send_ooc(f'Error: song {song} isn\'t recognized by server!')
 
         def wtce_mute(self):
             """
@@ -509,15 +515,22 @@ class ClientManager:
             """
             Rebuild the area list according to provided areas list.
             """
-            area_list = []
-
+            if not self.area.area_manager.arup_enabled:
+                area_list = ['{ Areas }\n Double-Click me to see Hubs\n  _______']
+            else:
+                area_list = ['{ Areas }']
             if (len(areas) > 0):
                 # This is where we can handle all the 'rendering', such as extra info etc.
                 for area in areas:
-                    area = f'[{area.id}] {area.name}'
-                    area_list.append(area)
+                    a = area.name
+                    if not self.area.area_manager.arup_enabled:
+                        a = f'[{area.id}] {area.name}'
+                    area_list.append(a)
 
             self.local_area_list = areas
+            # If we're currently viewing hub list, just update our local area list
+            if self.viewing_hub_list:
+                return
             # KEEP THE ASTERISK
             self.send_command('FA', *area_list)
 
@@ -709,6 +722,7 @@ class ClientManager:
                         # Stop following a ghost.
                         c.unfollow(silent=True)
 
+            reason = ''
             if not self.area.dark and not self.area.force_sneak and not self.sneaking and not self.hidden:
                 if not old_area.dark and not old_area.force_sneak:
                     for c in old_area.clients:
@@ -716,7 +730,7 @@ class ClientManager:
                         if c in old_area.owners and c.remote_listen in [2, 3]:
                             continue
                         c.send_command('CT', self.server.config['hostname'],
-                                        f'[{self.id}] {self.showname} leaves to [{area.id}] {area.name}.', '1')
+                                        f'[{self.id}] {self.showname} leaves to [{self.area.id}] {self.area.name}.', '1')
                 desc = '.'
                 if self.desc != '':
                     desc = ': ' + self.desc
@@ -729,20 +743,22 @@ class ClientManager:
                         desc += f'... Use /chardesc {self.id} to read the rest.'
                 area.send_command('CT', self.server.config['hostname'],
                                   f'[{self.id}] {self.showname} enters from [{old_area.id}] {old_area.name}{desc}', '1')
-                area.send_owner_command('CT', self.server.config['hostname'],
-                                  f'[{self.id}] {self.showname} moves from [{old_area.id}] {old_area.name} to [{area.id}] {area.name}.', '1')
             else:
-                reason = ''
                 if self.sneaking:
-                    reason = ' (you are sneaking)'
+                    reason = ' (sneaking)'
                 if self.hidden:
-                    reason = ' (you are hidden)'
+                    reason = ' (hidden)'
                 if self.area.force_sneak:
-                    reason = ' (the area forces sneaking)'
+                    reason = ' (new area forces sneaking)'
                 if self.area.dark:
-                    reason = ' (the area is dark)'
+                    reason = ' (new area is dark)'
                 self.send_ooc(
                     f'Changed area unannounced{reason}.')
+                for c in self.area.owners:
+                    if c in self.area.clients:
+                        c.send_ooc(f'[{self.id}] {self.showname} enters unannounced from [{old_area.id}] {old_area.name}{reason}')
+            area.send_owner_command('CT', self.server.config['hostname'],
+                                f'[{self.id}] {self.showname} moves from [{old_area.id}] {old_area.name} to [{self.area.id}] {self.area.name}.{reason}', '1')
 
             if area.cannot_ic_interact(self):
                 self.send_ooc(
@@ -1201,12 +1217,11 @@ class ClientManager:
             parts = message.split()
             random.shuffle(parts)
             return ' '.join(parts)
-
         # Added by AwesomeAim
         def typo_message(self, message):
             """Create a typo in a chat message"""
             import random
-            if len(message)<2:
+            if len(message)<5:
                 return message
             else:
                 first = random.randrange(0,len(message)-2)
