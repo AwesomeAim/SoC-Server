@@ -1254,6 +1254,7 @@ class ClientManager:
                         halves[1] = cut + halves[1]
                     deacronym(y, halves[0], halves[1], "-1")
 
+                message = message.lower()
                 parts = message.split()
 
                 j = 0
