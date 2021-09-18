@@ -1350,7 +1350,7 @@ class ClientManager:
             message = ''.join(lst)
             parts = message.split()
             for x in range(len(parts) - 1):
-                if parts[x][len(parts[x]) - 1] == '.':
+                if parts[x][len(parts[x]) - 1] == '.' or parts[x][len(parts[x]) - 1] == '!' or parts[x][len(parts[x]) - 1] == '?':
                     tmplst = list(parts[x + 1])
                     tmplst[0] = tmplst[0].capitalize()
                     parts[x + 1] = ''.join(tmplst)
