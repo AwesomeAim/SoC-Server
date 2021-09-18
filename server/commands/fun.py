@@ -10,7 +10,9 @@ __all__ = [
     'ooc_cmd_shake',
     'ooc_cmd_unshake',
     'ooc_cmd_typo',
-    'ooc_cmd_untypo'
+    'ooc_cmd_untypo',
+    'ooc_cmd_formal',
+    'ooc_cmd_unformal'
 ]
 
 
@@ -143,5 +145,48 @@ def ooc_cmd_untypo(client, arg):
             database.log_area('untypo', client, client.area, target=c)
             c.typo = False
         client.send_ooc(f'Untypo\'d {len(targets)} existing client(s).')
+    else:
+        client.send_ooc('No targets found.')
+        
+@mod_only()
+def ooc_cmd_formal(client, arg):
+    """
+    Forces the user to speak proper english. Currently expands acronyms.
+    Usage: /formal <id>
+    """
+    if len(arg) == 0:
+        raise ArgumentError('You must specify a target.')
+    try:
+        targets = client.server.client_manager.get_targets(
+            client, TargetType.ID, int(arg), False)
+    except:
+        raise ArgumentError('You must specify a target. Use /formal <id>.')
+    if targets:
+        for c in targets:
+            database.log_area('formal', client, client.area, target=c)
+            c.formal = True
+        client.send_ooc(f'Made {len(targets)} existing client(s) formal.')
+    else:
+        client.send_ooc('No targets found.')
+
+
+@mod_only()
+def ooc_cmd_unformal(client, arg):
+    """
+    Allow the user the freedom of lazy speech.
+    Usage: /untypo <id>
+    """
+    if len(arg) == 0:
+        raise ArgumentError('You must specify a target.')
+    try:
+        targets = client.server.client_manager.get_targets(
+            client, TargetType.ID, int(arg), False)
+    except:
+        raise ArgumentError('You must specify a target. Use /unformal <id>.')
+    if targets:
+        for c in targets:
+            database.log_area('unformal', client, client.area, target=c)
+            c.formal = False
+        client.send_ooc(f'Allowed {len(targets)} existing client(s) to be not formal.')
     else:
         client.send_ooc('No targets found.')

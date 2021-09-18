@@ -57,6 +57,7 @@ class ClientManager:
             self.evi_list = []
             self.disemvowel = False
             self.shaken = False
+            self.formal = False
             self.typo = False
             self.charcurse = []
             self.muted_global = False
@@ -1229,6 +1230,145 @@ class ClientManager:
                 lst = list(message)
                 lst[first], lst[second] = lst[second], lst[first]
                 return ''.join(lst)
+        def formal_message(self, message):
+            """Makes the message more formal"""
+            # excuse the slightly hardcoded solution, I'll tidy this up at some point
+            # in summation, try to make the acronyms standalone, by shuffling periods and such away,
+            # then deal with them, and then remove trailing spaces
+            # to make the sentence tidy and formal
+            if len(message)<1:
+                return message
+            def deacronym(z, str1, str2, str3):
+                parts.pop(z)
+                parts.insert(z, str1)
+                parts.insert(z + 1, str2)
+                if str3 != "-1":
+                    parts.insert(z + 2, str3)
+            
+            
+            def slicer(y, cut):
+                print("Slicing " + parts[y])
+                halves = parts[y].split(cut, 1)
+                if len(halves[0]) == 0:
+                    halves[0] = cut
+                else:
+                    halves[1] = cut + halves[1]
+                deacronym(y, halves[0], halves[1], "-1")
+            
+            
+            parts = message.split()
+            
+            j = 0
+            while j < len(parts):
+                if len(parts[j]) != 1:
+                    dot = parts[j].find(".")
+                    comma = parts[j].find(",")
+                    question = parts[j].find("?")
+                    exclamation = parts[j].find("!")
+                    if dot != -1:
+                        slicer(j, ".")
+                    elif comma != -1:
+                        slicer(j, ",")
+                    elif question != -1:
+                        slicer(j, "?")
+                    elif exclamation != -1:
+                        slicer(j, "!")
+                    else:
+                        j += 1
+                else:
+                    if parts[j] == "i":
+                        parts[j] = "I"
+                    j += 1
+            i = 0
+            
+            
+            while i < len(parts):
+                s = parts[i].lower()
+                # I'll make this a switch statement at some point, probably
+                if s == "weba" or s == "wb":
+                    deacronym(i, "welcome", "back", "-1")
+                elif s == "ty":
+                    deacronym(i, "thank", "you", "-1")
+                elif s == "ik":
+                    deacronym(i, "I", "know", "-1")
+                elif s == "brb":
+                    deacronym(i, "be", "right", "back")
+                elif s == "tyt":
+                    deacronym(i, "take", "your", "time")
+                elif s == "gtg":
+                    deacronym(i, "got", "to", "go")
+                elif s == "idk":
+                    deacronym(i, "I", "don't", "know")
+                elif s == "idc":
+                    deacronym(i, "I", "don't", "care")
+                elif s == "lol" or s == "lmfao" or s == "lmao":
+                    deacronym(i, "that's", "hilarious", "-1")
+                elif s == "btw":
+                    deacronym(i, "by", "the", "way")
+                elif s == "omw":
+                    deacronym(i, "on", "my", "way")
+                elif s == "omg":
+                    deacronym(i, "oh", "my", "god")
+                elif s == "wtf":
+                    deacronym(i, "what", "in", "blazes")
+                elif s == "tf":
+                    deacronym(i, "the", "hell", "-1")
+                elif s == "soc":
+                    deacronym(i, "Saints", "of", "Canterberry")
+                elif s == "hdf":
+                    deacronym(i, "Hope", "Despair", "Force")
+                elif s == "mos":
+                    deacronym(i, "Mountain", "of", "Spirits")
+                elif s == "erp":
+                    deacronym(i, "erotic", "role", "play")
+                elif s == "rp":
+                    deacronym(i, "role", "play", "-1")
+                elif s == "i'm" or s == "im":
+                    deacronym(i, "I", "am", "-1")
+                elif s == "i'll":
+                    deacronym(i, "I", "will", "-1")
+                elif s == "can't":
+                    deacronym(i, "can", "not", "-1")
+                elif s == "don't":
+                    deacronym(i, "do", "not", "-1")
+                elif s == "shouldn't":
+                    deacronym(i, "should", "not", "-1")
+                elif s == "wouldn't":
+                    deacronym(i, "would", "not", "-1")
+                elif s == "couldn't":
+                    deacronym(i, "could", "not", "-1")
+                elif s == "isn't":
+                    deacronym(i, "is", "not", "-1")
+            
+                i += 1
+            message = ' '.join(parts)
+            lst = list(message)
+            lst[0] = lst[0].capitalize()
+            if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?':
+                lst.append('.')
+            message = ''.join(lst)
+            parts = message.split()
+            for x in range(len(parts) - 1):
+                if parts[x][len(parts[x]) - 1] == '.' or parts[x][len(parts[x]) - 1] == '!' or parts[x][len(parts[x]) - 1] == '?':
+                    tmplst = list(parts[x + 1])
+                    tmplst[0] = tmplst[0].capitalize()
+                    parts[x + 1] = ''.join(tmplst)
+            message = ' '.join(parts)
+            lst = list(message)
+            trailingSpaces = True
+            
+            while trailingSpaces:
+                for x in range(1, len(lst)):
+                    if lst[x] == "." or lst[x] == "," or lst[x] == "?" or lst[x] == "!":
+                        if lst[x-1] == " ":
+                            lst.pop(x-1)
+                            break
+                        elif x == len(lst)-1:
+                            trailingSpaces = False
+            message = ''.join(lst)
+            print(message)
+
+
 
     def __init__(self, server):
         self.clients = set()
