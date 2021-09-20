@@ -1254,11 +1254,16 @@ class ClientManager:
                         halves[1] = cut + halves[1]
                     deacronym(y, halves[0], halves[1], "-1")
 
+                # this should only lowercase everything if the message is a lot of caps
                 message = message.lower()
                 parts = message.split()
 
                 j = 0
                 while j < len(parts):
+                    # failsafe
+                    if j >= 75:
+                        parts.append("FUCK")
+                        break
                     if len(parts[j]) != 1:
                         dot = parts[j].find(".")
                         comma = parts[j].find(",")
@@ -1281,6 +1286,10 @@ class ClientManager:
                 i = 0
 
                 while i < len(parts):
+                    # failsafe
+                    if i >= 125:
+                        parts.append("FUCK")
+                        break
                     s = parts[i].lower()
                     # I'll make this a switch statement at some point, probably
                     if s == "weba" or s == "wb":
@@ -1291,6 +1300,8 @@ class ClientManager:
                         deacronym(i, "I", "know", "-1")
                     elif s == "brb":
                         deacronym(i, "be", "right", "back")
+                    elif s == "yw":
+                        deacronym(i, "you", "are", "welcome")
                     elif s == "tyt":
                         deacronym(i, "take", "your", "time")
                     elif s == "gtg":
@@ -1299,8 +1310,12 @@ class ClientManager:
                         deacronym(i, "I", "don't", "know")
                     elif s == "idc":
                         deacronym(i, "I", "don't", "care")
+                    elif s == "stfu":
+                        deacronym(i, "still", "your", "tongue")
                     elif s == "lol" or s == "lmfao" or s == "lmao":
                         deacronym(i, "that", "is", "hilarious")
+                    elif s == "smh":
+                        deacronym(i, "shaking", "my", "head")
                     elif s == "btw":
                         deacronym(i, "by", "the", "way")
                     elif s == "omw":
@@ -1317,6 +1332,16 @@ class ClientManager:
                         deacronym(i, "Hope", "Despair", "Force")
                     elif s == "mos":
                         deacronym(i, "Mountain", "of", "Spirits")
+                    elif s == "mcc":
+                        deacronym(i, "Meme", "Community", "Casing")
+                    elif s == "cc":
+                        deacronym(i, "Case", "Café", "-1")
+                    elif s == "tnc":
+                        deacronym(i, "The", "Next", "Chapter")
+                    elif s == "vls":
+                        deacronym(i, "Virtual", "Lawyer", "Simulator")
+                    elif s == "bb2":
+                        deacronym(i, "Blood", "Bowl", "Two")
                     elif s == "erp":
                         deacronym(i, "erotic", "role", "play")
                     elif s == "rp":
@@ -1341,6 +1366,9 @@ class ClientManager:
                         deacronym(i, "there", "is", "-1")
                     elif s == "that's":
                         deacronym(i, "that", "is", "-1")
+                    elif s == "gimme":
+                        deacronym(i, "give", "me", "-1")
+
 
                     i += 1
                 message = ' '.join(parts)
@@ -1362,6 +1390,11 @@ class ClientManager:
                 while trailingspaces:
                     for x in range(1, len(lst)):
                         if lst[x] == "." or lst[x] == "," or lst[x] == "?" or lst[x] == "!":
+                            # failsafe
+                            if x >= 300:
+                                lst.append("FUCK")
+                                trailingspaces = False
+                                break
                             if lst[x - 1] == " ":
                                 lst.pop(x - 1)
                                 break
