@@ -1242,14 +1242,31 @@ class ClientManager:
         def typo_message(self, message):
             """Create a typo in a chat message"""
             import random
-            if len(message)<5:
-                return message
-            else:
-                first = random.randrange(0,len(message)-2)
-                second = first+1
+            # only pop half of the time, but also sometimes pop several times, and not on things you can't typo (1 character)
+            half = random.randrange(2)
+            typos = 0
+            while len(message) > 1 and half > 0 and typos < 5:
+                typos += 1
+                half = random.randrange(2)
+                first = random.randrange(0, len(message) - 1)
+                second = first + 1
                 lst = list(message)
-                lst[first], lst[second] = lst[second], lst[first]
-                return ''.join(lst)
+                swap2 = lst[second]
+                swap1 = lst[first]
+                # instead of "Otherwise" becoming "tOherwise", you'd want "Toherwise"
+                # something could be added for "A5" becoming "%a", but ehhh, doesn't seem worthwhile
+                if lst[first].isupper():
+                    swap2 = swap2.upper()
+                elif lst[first].islower():
+                    swap2 = swap2.lower()
+                if lst[second].isupper():
+                    swap1 = swap1.upper()
+                elif lst[second].islower():
+                    swap1 = swap1.lower()
+                lst[first], lst[second] = swap2, swap1
+                message = ''.join(lst)
+            return message
+
         def formal_message(self, message):
             """Makes the message more formal"""
             # excuse the slightly hardcoded solution, I'll tidy this up at some point
