@@ -357,7 +357,7 @@ def ooc_cmd_player_move_delay(client, arg):
     """
     args = arg.split()
     try:
-        if len(args) > 0 and client in client.area_manager.owners:
+        if len(args) > 0 and client in client.area.area_manager.owners:
             c = client.server.client_manager.get_targets(client, TargetType.ID,
                                                         int(args[0]), False)[0]
             if len(args) > 1:
@@ -590,7 +590,7 @@ def mod_keys(client, arg, mod=0):
             args = []
         keys = []
 
-        if mod == 1:
+        if mod in (1, 2):
             keys = client.area.area_manager.get_character_data(target, 'keys', [])
         for a in args:
             for key in a.split('-'):
