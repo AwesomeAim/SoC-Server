@@ -1478,7 +1478,7 @@ class ClientManager:
                 message = ' '.join(parts)
                 lst = list(message)
                 lst[0] = lst[0].capitalize()
-                if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?' and lst[len(lst) - 1] != '*':
+                if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?':
                     lst.append('.')
                 message = ''.join(lst)
                 parts = message.split()
