@@ -1274,14 +1274,13 @@ class ClientManager:
             # then deal with them, and then remove trailing spaces
             # to make the sentence tidy and formal
             if len(message) < 1 or message.isspace():
-                return message
+                return "I have nothing of value to say regarding that."
             else:
-                def deacronym(z, str1, str2, str3):
+                def deacronym(z, strarray):
                     parts.pop(z)
-                    parts.insert(z, str1)
-                    parts.insert(z + 1, str2)
-                    if str3 != "-1":
-                        parts.insert(z + 2, str3)
+                    for segment in strarray:
+                        parts.insert(z, segment)
+                        z += 1
         
                 def slicer(y, cut):
                     halves = parts[y].split(cut, 1)
@@ -1289,19 +1288,31 @@ class ClientManager:
                         halves[0] = cut
                     else:
                         halves[1] = cut + halves[1]
-                    deacronym(y, halves[0], halves[1], "-1")
+                    deacronym(y, halves)
         
-                # this should only lowercase everything if the message is a lot of caps
-                message = message.lower()
+                # anti caps if more than a fourth of the characters are capitalised
+                quota = len(message) / 4
+                lst = list(message)
+                capitals = 0
+                for chara in lst:
+                    if chara.isupper():
+                        capitals += 1
+                        if capitals > quota:
+                            message = message.lower()
+                            break
+        
                 parts = message.split()
         
+                # this throws punctuation away from the words so they can be deacronym'd
                 j = 0
                 while j < len(parts):
                     if len(parts[j]) != 1:
+                        # this can probably be done better
                         dot = parts[j].find(".")
                         comma = parts[j].find(",")
                         question = parts[j].find("?")
                         exclamation = parts[j].find("!")
+                        asterisk = parts[j].find("*")
                         if dot != -1:
                             slicer(j, ".")
                         elif comma != -1:
@@ -1310,6 +1321,8 @@ class ClientManager:
                             slicer(j, "?")
                         elif exclamation != -1:
                             slicer(j, "!")
+                        elif asterisk != -1:
+                            slicer(j, "*")
                         else:
                             j += 1
                     else:
@@ -1321,112 +1334,151 @@ class ClientManager:
                 while i < len(parts):
                     s = parts[i].lower()
                     # I'll make this a switch statement at some point, probably
+                    # as it turns out switch statements do not really exist
+                    # press x to delete python
                     if s == "weba" or s == "wb":
-                        deacronym(i, "welcome", "back", "-1")
+                        deacronym(i, ["welcome", "back"])
                     elif s == "ty":
-                        deacronym(i, "thank", "you", "-1")
+                        deacronym(i, ["thank", "you"])
+                    elif s == "fr":
+                        deacronym(i, ["for", "real"])
                     elif s == "ik":
-                        deacronym(i, "I", "know", "-1")
+                        deacronym(i, ["I", "know"])
                     elif s == "brb":
-                        deacronym(i, "be", "right", "back")
+                        deacronym(i, ["be", "right", "back"])
                     elif s == "yw":
-                        deacronym(i, "you", "are", "welcome")
+                        deacronym(i, ["you", "are", "welcome"])
                     elif s == "tyt":
-                        deacronym(i, "take", "your", "time")
+                        deacronym(i, ["take", "your", "time"])
                     elif s == "gtg":
-                        deacronym(i, "got", "to", "go")
+                        deacronym(i, ["got", "to", "go"])
                     elif s == "idk":
-                        deacronym(i, "I", "don't", "know")
+                        deacronym(i, ["I", "don't", "know"])
                     elif s == "idc":
-                        deacronym(i, "I", "don't", "care")
+                        deacronym(i, ["I", "don't", "care"])
                     elif s == "stfu":
-                        deacronym(i, "still", "your", "tongue")
+                        deacronym(i, ["still", "your", "tongue"])
                     elif s == "ffs":
-                        deacronym(i, "for", "god's", "sake")
-                    elif s == "lol" or s == "lmfao" or s == "lmao":
-                        deacronym(i, "that", "is", "hilarious")
+                        deacronym(i, ["for", "god's", "sake"])
+                    elif s == "lmfao" or s == "lmao":
+                        deacronym(i, ["that", "is", "hilarious"])
+                    elif s == "lol":
+                        deacronym(i, ["*chuckles*"])
                     elif s == "smh":
-                        deacronym(i, "shaking", "my", "head")
+                        deacronym(i, ["shaking", "my", "head"])
                     elif s == "btw":
-                        deacronym(i, "by", "the", "way")
+                        deacronym(i, ["by", "the", "way"])
                     elif s == "tfw":
-                        deacronym(i, "that", "feeling", "when")
+                        deacronym(i, ["that", "feeling", "when"])
+                    elif s == "mfw":
+                        deacronym(i, ["my", "face", "when"])
                     elif s == "omw":
-                        deacronym(i, "on", "my", "way")
+                        deacronym(i, ["on", "my", "way"])
                     elif s == "omg" or s == "omfg":
-                        deacronym(i, "oh", "my", "god")
+                        deacronym(i, ["oh", "my", "god"])
                     elif s == "nvm":
-                        deacronym(i, "never", "mind", "-1")
+                        deacronym(i, ["never", "mind"])
                     elif s == "wtf":
-                        deacronym(i, "what", "in", "blazes")
+                        deacronym(i, ["what", "in", "blazes"])
+                    elif s == "rip":
+                        deacronym(i, ["may", "they", "rest", "in", "piece"])
                     elif s == "tf":
-                        deacronym(i, "the", "hell", "-1")
+                        deacronym(i, ["the", "hell"])
                     elif s == "soc":
-                        deacronym(i, "Saints", "of", "Canterberry")
+                        deacronym(i, ["Saints", "of", "Canterberry"])
                     elif s == "hdf":
-                        deacronym(i, "Hope", "Despair", "Force")
+                        deacronym(i, ["Hope", "Despair", "Force"])
                     elif s == "mos":
-                        deacronym(i, "Mountain", "of", "Spirits")
+                        deacronym(i, ["Mountain", "of", "Spirits"])
                     elif s == "mcc":
-                        deacronym(i, "Meme", "Community", "Casing")
+                        deacronym(i, ["Meme", "Community", "Casing"])
                     elif s == "cc":
-                        deacronym(i, "Case", "Café", "-1")
+                        deacronym(i, ["Case", "Café"])
                     elif s == "tnc":
-                        deacronym(i, "The", "Next", "Chapter")
+                        deacronym(i, ["The", "Next", "Chapter"])
                     elif s == "vls":
-                        deacronym(i, "Virtual", "Lawyer", "Simulator")
-                    elif s == "ao":
-                        deacronym(i, "Attorney", "Online", "-1")
+                        deacronym(i, ["Virtual", "Lawyer", "Simulator"])
+                    elif s == "ao" or s == "aao":
+                        deacronym(i, ["Attorney", "Online"])
                     elif s == "ao2":
-                        deacronym(i, "Attorney", "Online", "Two")
+                        deacronym(i, ["Attorney", "Online", "Two"])
                     elif s == "bb2":
-                        deacronym(i, "Blood", "Bowl", "Two")
+                        deacronym(i, ["Blood", "Bowl", "Two"])
                     elif s == "erp":
-                        deacronym(i, "erotic", "role", "play")
+                        deacronym(i, ["erotic", "role", "play"])
                     elif s == "rp":
-                        deacronym(i, "role", "play", "-1")
+                        deacronym(i, ["role", "play"])
                     elif s == "cbt":
-                        deacronym(i, "cock &", "ball", "torture") # this is crude
+                        deacronym(i, ["cock", "&", "ball", "torture"])
                     elif s == "i'm" or s == "im":
-                        deacronym(i, "I", "am", "-1")
+                        deacronym(i, ["I", "am"])
+                    elif s == "ima":
+                        deacronym(i, ["I", "am", "going", "to"])
                     elif s == "i'll":
-                        deacronym(i, "I", "will", "-1")
-                    elif s == "can't":
-                        deacronym(i, "can", "not", "-1")
-                    elif s == "don't":
-                        deacronym(i, "do", "not", "-1")
-                    elif s == "shouldn't":
-                        deacronym(i, "should", "not", "-1")
-                    elif s == "wouldn't":
-                        deacronym(i, "would", "not", "-1")
-                    elif s == "couldn't":
-                        deacronym(i, "could", "not", "-1")
-                    elif s == "isn't":
-                        deacronym(i, "is", "not", "-1")
-                    elif s == "there's":
-                        deacronym(i, "there", "is", "-1")
-                    elif s == "that's":
-                        deacronym(i, "that", "is", "-1")
+                        deacronym(i, ["I", "will"])
+                    elif s == "i've" or s == "ive":
+                        deacronym(i, ["I", "have"])
+                    elif s == "can't" or s == "cant":
+                        deacronym(i, ["cannot"])
+                    elif s == "don't" or s == "dont":
+                        deacronym(i, ["do", "not"])
+                    elif s == "shouldn't" or s == "shouldnt":
+                        deacronym(i, ["should", "not"])
+                    elif s == "wouldn't" or s == "wouldnt":
+                        deacronym(i, ["would", "not"])
+                    elif s == "couldn't" or s == "couldnt":
+                        deacronym(i, ["could", "not"])
+                    elif s == "isn't" or s == "isnt":
+                        deacronym(i, ["is", "not"])
+                    elif s == "there's" or s == "theres":
+                        deacronym(i, ["there", "is"])
+                    elif s == "that's" or s == "thats":
+                        deacronym(i, ["that", "is"])
                     elif s == "i'd":
-                        deacronym(i, "I", "would", "-1")
+                        deacronym(i, ["I", "would"])
                     elif s == "she'd":
-                        deacronym(i, "she", "would", "-1")
-                    elif s == "you'd":
-                        deacronym(i, "you", "would", "-1")
-                    elif s == "he'd":
-                        deacronym(i, "he", "would", "-1")
-                    elif s == "how'd":
-                        deacronym(i, "how", "would", "-1")
+                        deacronym(i, ["she", "would"])
+                    elif s == "you'd" or s == "you'd":
+                        deacronym(i, ["you", "would"])
+                    elif s == "he'd" or s == "hed":
+                        deacronym(i, ["he", "would"])
+                    elif s == "how'd" or s == "howd":
+                        deacronym(i, ["how", "would"])
                     elif s == "istg":
-                        deacronym(i, "I", "curse thy", "name") # this is crude
+                        deacronym(i, ["I", "curse", "thy", "name"])  # this is crude
                     elif s == "gimme":
-                        deacronym(i, "give", "me", "-1")
+                        deacronym(i, ["give", "me"])
+                    elif s == "fuck":
+                        deacronym(i, ["blast"])
+                    elif s == "fucking":
+                        deacronym(i, ["lovemaking"])
+                    elif s == "shit":
+                        deacronym(i, ["poppycock"])
+                    elif s == "bitch":
+                        deacronym(i, ["swine"])
+                    elif s == "mommy":
+                        deacronym(i, ["mother", "figure"])
+                    elif s == "daddy":
+                        deacronym(i, ["father", "figure"])
+                    elif s == "horny":
+                        deacronym(i, ["frisky"])
+                    elif s == "cringe":
+                        deacronym(i, ["balderdash"])
+                    elif s == "tho":
+                        deacronym(i, ["though"])
+                    elif s == "gonna":
+                        deacronym(i, ["going to"])
+                    elif s == "bruh":
+                        deacronym(i, ["friend", "of", "mine"])
+                    elif s == "porn":
+                        deacronym(i, ["pornographic", "material"])
         
                     i += 1
+                # period at the end and capital at the start
                 message = ' '.join(parts)
                 lst = list(message)
                 lst[0] = lst[0].capitalize()
-                if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?':
+                if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?' and lst[len(lst) - 1] != '*':
                     lst.append('.')
                 message = ''.join(lst)
                 parts = message.split()
