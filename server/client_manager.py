@@ -1312,7 +1312,6 @@ class ClientManager:
                         comma = parts[j].find(",")
                         question = parts[j].find("?")
                         exclamation = parts[j].find("!")
-                        asterisk = parts[j].find("*")
                         if dot != -1:
                             slicer(j, ".")
                         elif comma != -1:
@@ -1321,8 +1320,6 @@ class ClientManager:
                             slicer(j, "?")
                         elif exclamation != -1:
                             slicer(j, "!")
-                        elif asterisk != -1:
-                            slicer(j, "*")
                         else:
                             j += 1
                     else:
