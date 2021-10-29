@@ -1274,7 +1274,7 @@ class ClientManager:
             # then deal with them, and then remove trailing spaces
             # to make the sentence tidy and formal
             if len(message) < 1 or message.isspace():
-                return "I have nothing of value to say regarding that."
+                return "I am an idiot." # I tried to be nice
             else:
                 def deacronym(z, strarray):
                     parts.pop(z)
@@ -1365,6 +1365,8 @@ class ClientManager:
                         deacronym(i, ["shaking", "my", "head"])
                     elif s == "btw":
                         deacronym(i, ["by", "the", "way"])
+                    elif s == "imo":
+                        deacronym(i, ["in", "my", "opinion"])
                     elif s == "tfw":
                         deacronym(i, ["that", "feeling", "when"])
                     elif s == "mfw":
@@ -1377,8 +1379,10 @@ class ClientManager:
                         deacronym(i, ["never", "mind"])
                     elif s == "wtf":
                         deacronym(i, ["what", "in", "blazes"])
+                    elif s == "ngl":
+                        deacronym(i, ["not", "going", "to", "lie"])
                     elif s == "rip":
-                        deacronym(i, ["may", "they", "rest", "in", "piece"])
+                        deacronym(i, ["may", "they", "rest", "in", "peace"])
                     elif s == "tf":
                         deacronym(i, ["the", "hell"])
                     elif s == "soc":
@@ -1402,9 +1406,9 @@ class ClientManager:
                     elif s == "bb2":
                         deacronym(i, ["Blood", "Bowl", "Two"])
                     elif s == "erp":
-                        deacronym(i, ["erotic", "role", "play"])
+                        deacronym(i, ["erotic", "roleplay"])
                     elif s == "rp":
-                        deacronym(i, ["role", "play"])
+                        deacronym(i, ["roleplay"])
                     elif s == "cbt":
                         deacronym(i, ["cock", "&", "ball", "torture"])
                     elif s == "i'm" or s == "im":
@@ -1442,7 +1446,7 @@ class ClientManager:
                     elif s == "how'd" or s == "howd":
                         deacronym(i, ["how", "would"])
                     elif s == "istg":
-                        deacronym(i, ["I", "curse", "thy", "name"])  # this is crude
+                        deacronym(i, ["I", "curse", "thy", "name"])
                     elif s == "gimme":
                         deacronym(i, ["give", "me"])
                     elif s == "fuck":
@@ -1469,35 +1473,43 @@ class ClientManager:
                         deacronym(i, ["friend", "of", "mine"])
                     elif s == "porn":
                         deacronym(i, ["pornographic", "material"])
+                    elif s == "boob" or s == "booba" or s == "boobie" or s == "tit":
+                        deacronym(i, ["breast"])
+                    elif s == "boobs" or s == "boobas" or s == "boobies" or s == "tits":
+                        deacronym(i, ["breasts"])
+                    elif s == "cock" or s == "dick":
+                        deacronym(i, ["penis"])
         
                     i += 1
                 # period at the end and capital at the start
                 message = ' '.join(parts)
                 lst = list(message)
                 lst[0] = lst[0].capitalize()
-                if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?':
+                if lst[len(lst) - 1] != '.' and lst[len(lst) - 1] != '!' and lst[len(lst) - 1] != '?' and lst[len(lst) - 1] != '*':
                     lst.append('.')
                 message = ''.join(lst)
                 parts = message.split()
                 for x in range(len(parts) - 1):
-                    if parts[x][len(parts[x]) - 1] == '.' or parts[x][len(parts[x]) - 1] == '!' or parts[x][len(parts[x]) - 1] == '?':
+                    if parts[x][len(parts[x]) - 1] == '.' or parts[x][len(parts[x]) - 1] == '!' or parts[x][len(parts[x]) - 1] == '?' or parts[x][len(parts[x]) - 1] == '*':
                         tmplst = list(parts[x + 1])
                         tmplst[0] = tmplst[0].capitalize()
                         parts[x + 1] = ''.join(tmplst)
                 message = ' '.join(parts)
                 lst = list(message)
                 trailingspaces = True
-        
                 while trailingspaces:
                     # following only starts at 0 because of single punctuation sentences like ?
                     for x in range(0, len(lst)):
-                        if lst[x] == "." or lst[x] == "," or lst[x] == "?" or lst[x] == "!":
+                        if lst[x] == "." or lst[x] == "," or lst[x] == "?" or lst[x] == "!" or lst[x] == "*":
                             if lst[x - 1] == " ":
                                 lst.pop(x - 1)
                                 break
                             elif x == len(lst) - 1:
                                 trailingspaces = False
-                return ''.join(lst)
+                if len(lst) == 1 and lst[0] == ".":
+                    return "I am an idiot."
+                else:
+                    return ''.join(lst)
 
 
 
