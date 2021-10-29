@@ -78,7 +78,7 @@ def rtd(arg):
         if '**' in modifiers: #Exponentiation manually disabled, it can be pretty dangerous
             raise ArgumentError('Expected numbers and standard mathematical operations in modifier')
     else:
-        num_dice,chosen_max,modifiers = 1,6,'' #Default
+        num_dice,chosen_max,modifiers = 1,20,'' #Default
 
     roll = ''
     Sum = 0
