@@ -29,6 +29,7 @@ __all__ = [
     'ooc_cmd_cs',
     'ooc_cmd_pta',
     'ooc_cmd_concede',
+    'ooc_cmd_subtheme',
 ]
 
 
@@ -574,6 +575,9 @@ def ooc_cmd_concede(client, arg):
     """
     if client.area.minigame != '':
         try:
+            if arg.lower() == 'not-pta' and client.area.minigame == 'Panic Talk Action':
+                client.send_ooc('Current minigame is Panic Talk Action - not conceding this one.')
+                return
             # CM's end the minigame automatically using /concede
             if client in client.area.owners:
                 client.area.end_minigame('Forcibly ended.')
@@ -584,3 +588,12 @@ def ooc_cmd_concede(client, arg):
             raise ex
     else:
         client.send_ooc('There is no minigame running right now.')
+
+
+@mod_only(area_owners=True)
+def ooc_cmd_subtheme(client, arg):
+    """
+    Change the subtheme for everyone in the area.
+    Usage: /subtheme <subtheme_name>
+    """
+    client.area.send_command('ST', arg, '1')

@@ -71,42 +71,34 @@ class Area:
             if self.caller not in self.area.owners:
                 return
             server = self.caller.server
-            # Prepare for disgusting hacks
-            dummy_client = server.client_manager.Client(server, self.caller.transport, -1, self.caller.ipid)
-            dummy_client.server = server
-            dummy_client.area = self.area
-            dummy_client.area._owners.add(dummy_client)
-            if self.caller in self.area.area_manager.owners:
-                dummy_client.area.area_manager.owners.add(dummy_client)
-            dummy_client.name = f'[Timer] {self.caller.name}'
-            dummy_client.showname = f'[Timer] {self.caller.name}'
-            dummy_client.remote_listen = 0
             for cmd in self.commands:
-                spl = cmd.split(' ', 1)
-                cmd = spl[0].lower()
+                args = cmd.split(' ')
+                cmd = args.pop(0).lower()
                 arg = ''
-                if len(spl) == 2:
-                    arg = spl[1][:1024]
+                if len(args) > 0:
+                    arg = ' '.join(args)[:1024]
                 try:
                     called_function = f'ooc_cmd_{cmd}'
                     if len(server.command_aliases) > 0 and not hasattr(commands, called_function):
                         if cmd in server.command_aliases:
                             called_function = f'ooc_cmd_{server.command_aliases[cmd]}'
                     if not hasattr(commands, called_function):
-                        dummy_client.send_ooc(f'[Timer {self.id}] Invalid command: {cmd}. Use /help to find up-to-date commands.')
+                        self.caller.send_ooc(f'[Timer {self.id}] Invalid command: {cmd}. Use /help to find up-to-date commands.')
                         return
-                    getattr(commands, called_function)(dummy_client, arg)
+                    # Remember the old area.
+                    old_area = self.caller.area
+                    old_hub = self.caller.area.area_manager
+                    self.caller.area = self.area
+                    getattr(commands, called_function)(self.caller, arg)
+                    if old_area and old_area in old_hub.areas:
+                        self.caller.area = old_area
+                    # else:
+                    #     self.caller.set_area(old_hub.default_area())
                 except (ClientError, AreaError, ArgumentError, ServerError) as ex:
-                    dummy_client.send_ooc(f'[Timer {self.id}] {ex}')
+                    self.caller.send_ooc(f'[Timer {self.id}] {ex}')
                 except Exception as ex:
-                    dummy_client.send_ooc(f'[Timer {self.id}] An internal error occurred: {ex}. Please inform the staff of the server about the issue.')
+                    self.caller.send_ooc(f'[Timer {self.id}] An internal error occurred: {ex}. Please inform the staff of the server about the issue.')
                     logger.exception('Exception while running a command')
-            self.caller.transport = dummy_client.transport
-            dummy_client.transport = None
-            dummy_client.area._owners.remove(dummy_client)
-            if dummy_client in dummy_client.area.area_manager.owners:
-                dummy_client.area.area_manager.owners.remove(dummy_client)
-            del dummy_client
 
     """Represents a single instance of an area."""
     def __init__(self,
@@ -229,6 +221,9 @@ class Area:
         self.timers = [
             self.Timer(x) for x in range(20)
         ]
+
+        self.demo = []
+        self.demo_schedule = None
 
     @property
     def name(self):
@@ -1462,6 +1457,71 @@ class Area:
                 them = f'🔴[{target.id}] {target.showname} (Red)'
                 break
         self.broadcast_ooc(f'❗{self.minigame}❗\n{us} objects to {them}!\n⏲You have {timer} seconds.\n/cs <id> to join the debate against target ID.')
+
+    def play_demo(self, client):
+        if self.demo_schedule:
+            self.demo_schedule.cancel()
+        if len(self.demo) <= 0:
+            self.stop_demo()
+            return
+
+        packet = self.demo.pop(0)
+        header = packet[0]
+        args = packet[1:]
+        if header.startswith('/'): # It's a command call
+            # TODO: make this into a global function so commands can be called from anywhere in code...
+            cmd = header[1:].lower()
+            arg = ''
+            if len(args) > 0:
+                arg = ' '.join(args)[:1024]
+            try:
+                called_function = f'ooc_cmd_{cmd}'
+                if len(client.server.command_aliases) > 0 and not hasattr(commands, called_function):
+                    if cmd in client.server.command_aliases:
+                        called_function = f'ooc_cmd_{client.server.command_aliases[cmd]}'
+                if not hasattr(commands, called_function):
+                    client.send_ooc(f'[Demo] Invalid command: {cmd}. Use /help to find up-to-date commands.')
+                    self.stop_demo()
+                    return
+                getattr(commands, called_function)(client, arg)
+            except (ClientError, AreaError, ArgumentError, ServerError) as ex:
+                client.send_ooc(f'[Demo] {ex}')
+                self.stop_demo()
+                return
+            except Exception as ex:
+                client.send_ooc(f'[Demo] An internal error occurred: {ex}. Please inform the staff of the server about the issue.')
+                logger.exception('Exception while running a command')
+                self.stop_demo()
+                return
+        elif header == 'wait':
+            secs = float(args[0]) / 1000
+            self.demo_schedule = asyncio.get_event_loop().call_later(
+                secs, lambda: self.play_demo(client))
+            return
+        elif len(client.broadcast_list) > 0:
+            for area in client.broadcast_list:
+                area.send_command(header, *args)
+        else:
+            self.send_command(header, *args)
+        self.play_demo(client)
+
+    def stop_demo(self):
+        if self.demo_schedule:
+            self.demo_schedule.cancel()
+        self.demo.clear()
+
+        # reset the packets the demo could have modified
+
+        # Get defense HP bar
+        self.send_command('HP', 1, self.hp_def)
+        # Get prosecution HP bar
+        self.send_command('HP', 2, self.hp_pro)
+
+        # Send the background information
+        if self.dark:
+            self.send_command('BN', self.background_dark)
+        else:
+            self.send_command('BN', self.background)
 
     class JukeboxVote:
         """Represents a single vote cast for the jukebox."""

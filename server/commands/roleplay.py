@@ -28,7 +28,8 @@ __all__ = [
     'ooc_cmd_rolla',
     'ooc_cmd_coinflip',
     'ooc_cmd_8ball',
-    'ooc_cmd_timer'
+    'ooc_cmd_timer',
+    'ooc_cmd_demo',
 ]
 
 
@@ -523,6 +524,8 @@ def ooc_cmd_timer(client, arg):
         timer.started = False
         timer.static = None
         timer.target = None
+        if timer.schedule:
+            timer.schedule.cancel()
         client.send_ooc(f'Timer {timer_id} unset and hidden.')
         if timer_id == 0:
             client.area.area_manager.send_command('TI', timer_id, 3)
@@ -575,3 +578,46 @@ def ooc_cmd_timer(client, arg):
         if timer.started:
             timer.schedule = asyncio.get_event_loop().call_later(
                 int(timer.static.total_seconds()), timer.timer_expired)
+
+
+@mod_only(area_owners=True)
+def ooc_cmd_demo(client, arg):
+    """
+    Usage:
+    /demo <evidence_id> or /demo <evidence_name>
+    Use /demo to stop demo
+    """
+    if arg == '':
+        client.area.stop_demo()
+        client.send_ooc('Stopping demo playback...')
+        return
+
+    evidence = None
+    if arg.isnumeric():
+        arg = str(int(arg)-1)
+    for i, evi in enumerate(client.area.evi_list.evidences):
+        if (arg.lower() == evi.name.lower() or arg == str(i)):
+            evidence = evi
+            break
+    if not evidence:
+        raise ArgumentError('Target evidence not found!')
+
+    client.area.demo.clear()
+
+    desc = evidence.desc.replace('<num>', '#').replace(
+        '<and>', '&').replace('<percent>', '%').replace('<dollar>', '$')
+    packets = desc.split('%')
+    for packet in packets:
+        p_args = packet.split('#')
+        p_args[0] = p_args[0].strip()
+        if p_args[0] in ['MS', 'CT', 'MC', 'BN', 'HP', 'wait']:
+            client.area.demo += [p_args]
+        elif p_args[0].startswith('/'): # It's a command!
+            p_args = packet.split(' ')
+            p_args[0] = p_args[0].strip()
+            client.area.demo += [p_args]
+    for c in client.area.clients:
+        if c in client.area.owners:
+            c.send_ooc(f'Starting demo playback using evidence \'{evidence.name}\'...')
+
+    client.area.play_demo(client)
