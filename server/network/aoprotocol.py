@@ -655,7 +655,7 @@ class AOProtocol(asyncio.Protocol):
         if self.client.disemvowel:
             msg = self.client.disemvowel_message(msg)
         # Added by AwesomeAim
-        if self.client.formal
+        if self.client.formal:
             msg = self.client.formal_message(msg)
         if self.client.typo:
             msg = self.client.typo_message(msg)
