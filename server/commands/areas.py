@@ -105,7 +105,7 @@ def ooc_cmd_allow_blankposting(client, arg):
     client.area.broadcast_ooc(
         '{} [{}] has set blankposting in the area to {}.'.format(
             client.char_name, client.id, answer))
-    database.log_room('blankposting', client, client.area, message=client.area.blankposting_allowed)
+    database.log_area('blankposting', client, client.area, message=client.area.blankposting_allowed)
     
 
 def ooc_cmd_area(client, arg):
