@@ -10,6 +10,7 @@ __all__ = [
     'ooc_cmd_bg',
     'ooc_cmd_bgs',
     'ooc_cmd_status',
+    'ooc_cmd_allow_blankposting',
     'ooc_cmd_area',
     'ooc_cmd_area_visible',
     'ooc_cmd_getarea',
@@ -92,6 +93,20 @@ def ooc_cmd_status(client, arg):
         except AreaError:
             raise
 
+@mod_only(area_owners=True)
+def ooc_cmd_allow_blankposting(client, arg):
+    """
+    Toggle whether or not in-character messages purely consisting of spaces
+    are allowed.
+    Usage: /allow_blankposting
+    """
+    client.area.blankposting_allowed = not client.area.blankposting_allowed
+    answer = 'allowed' if client.area.blankposting_allowed else 'forbidden'
+    client.area.broadcast_ooc(
+        '{} [{}] has set blankposting in the area to {}.'.format(
+            client.char_name, client.id, answer))
+    database.log_room('blankposting', client, client.area, message=client.area.blankposting_allowed)
+    
 
 def ooc_cmd_area(client, arg):
     """
