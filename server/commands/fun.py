@@ -118,15 +118,16 @@ def ooc_cmd_typo(client, arg):
         raise ArgumentError('You must specify a target.')
     try:
         targets = client.server.client_manager.get_targets(
-            client, TargetType.ID, int(arg), False
-        )
+            client, TargetType.ID, int(arg), False)
     except:
-        raise ArgumentError("You must specify a target. Use /unshake <id>.")
+        raise ArgumentError('You must specify a target. Use /typo <id>.')
     if targets:
         for c in targets:
-            database.log_area("unshake", client, client.area, target=c)
-            c.shaken = False
-        client.send_ooc(f"Unshook {len(targets)} existing client(s).")
+            database.log_area('typo', client, client.area, target=c)
+            c.typo = True
+        client.send_ooc(f'Forced {len(targets)} existing client(s) to make typos.')
+    else:
+        client.send_ooc('No targets found.')
 
 
 @mod_only()
