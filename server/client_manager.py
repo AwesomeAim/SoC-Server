@@ -1718,7 +1718,7 @@ class ClientManager:
                             elif x == len(lst) - 1:
                                 trailingspaces = False
                 if len(lst) == 1 and lst[0] == ".":
-                    return "I am an idiot."
+                    return "*blankposts*"
                 else:
                     return ''.join(lst)
 

@@ -179,6 +179,12 @@ def ooc_cmd_roll(client, arg):
     """
     roll, num_dice, chosen_max, _modifiers, Sum = rtd(arg)
 
+    # Added by AwesomeAim (very funny ik)
+    if roll == 69 or Sum == 69:
+        client.typo = true
+    if roll == 420 or Sum == 420:
+        client.formal = true
+
     client.area.broadcast_ooc(
         f"{client.showname} rolled {roll} out of {chosen_max}."
         + (f"\nThe total sum is {Sum}." if num_dice > 1 else "")
