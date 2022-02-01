@@ -42,7 +42,7 @@ def ooc_cmd_bg(client, arg):
             pos_lock = f"\nAvailable positions: {pos}."
         client.send_ooc(f"Current background is {client.area.background}.{pos_lock}")
         return
-    if not client in client.area.owners and not client.is_mod and client.area.bg_lock:
+    if client not in client.area.owners and not client.is_mod and client.area.bg_lock:
         raise AreaError("This area's background is locked!")
     if client.area.cannot_ic_interact(client):
         raise AreaError("You are not on the area's invite list!")
@@ -85,7 +85,7 @@ def ooc_cmd_status(client, arg):
         if (
             not client.area.can_change_status
             and not client.is_mod
-            and not client in client.area.owners
+            and client not in client.area.owners
         ):
             raise AreaError(
                 "This area's status cannot be changed by anyone who's not a CM or mod!"
@@ -94,7 +94,7 @@ def ooc_cmd_status(client, arg):
             raise AreaError("You are not on the area's invite list!")
         if (
             not client.is_mod
-            and not (client in client.area.owners)
+            and client not in client.area.owners
             and client.char_id == -1
         ):
             raise ClientError("You may not do that while spectating!")
@@ -337,8 +337,8 @@ def ooc_cmd_area_kick(client, arg):
                 # We're a puny CM, we can't do this.
                 if (
                     not client.is_mod
-                    and not client in client.area.area_manager.owners
-                    and not c in client.area.clients
+                    and client not in client.area.area_manager.owners
+                    and c not in client.area.clients
                 ):
                     raise ArgumentError(
                         "You can't kick someone from another area as a CM!"
@@ -354,8 +354,8 @@ def ooc_cmd_area_kick(client, arg):
                         raise
                     if (
                         not client.is_mod
-                        and not client in client.area.area_manager.owners
-                        and not client in area.owners
+                        and client not in client.area.area_manager.owners
+                        and client not in area.owners
                     ):
                         raise ArgumentError(
                             "You can't kick someone to an area you don't own as a CM!"
@@ -405,7 +405,7 @@ def ooc_cmd_pos_lock(client, arg):
         return
     if not arg or arg.strip() == "":
         if len(client.area.pos_lock) > 0:
-            pos = ", ".join(str(l) for l in client.area.pos_lock)
+            pos = ", ".join(str(p_lock) for p_lock in client.area.pos_lock)
             client.send_ooc(f"Pos_lock is currently {pos}.")
         else:
             client.send_ooc("No pos lock set.")
@@ -430,7 +430,7 @@ def ooc_cmd_pos_lock(client, arg):
             continue
         client.area.pos_lock.append(pos)
 
-    pos = ", ".join(str(l) for l in client.area.pos_lock)
+    pos = ", ".join(str(p_lock) for p_lock in client.area.pos_lock)
     client.area.broadcast_ooc(f"Locked pos into {pos}.")
     client.area.send_command(
         "SD", "*".join(client.area.pos_lock)
@@ -468,7 +468,7 @@ def ooc_cmd_knock(client, arg):
             ):
                 area = _area
                 break
-        if area == None:
+        if area is None:
             raise ClientError("Target area not found.")
         if area == client.area:
             client.area.broadcast_ooc(
@@ -489,13 +489,14 @@ def ooc_cmd_knock(client, arg):
                     link = client.area.links[str(area.id)]
 
                     # Link requires us to be inside a piece of evidence
-                    if len(link["evidence"]) > 0 and not (
-                        client.hidden_in in link["evidence"]
+                    if (
+                        len(link["evidence"]) > 0
+                        and client.hidden_in not in link["evidence"]
                     ):
                         raise ClientError(
                             f"Failed to knock on [{area.id}] {area.name}: That area is inaccessible!"
                         )
-            if client.area.locked and not client.id in client.area.invite_list:
+            if client.area.locked and client.id not in client.area.invite_list:
                 raise ClientError(
                     f"Failed to knock on [{area.id}] {area.name}: Current area is locked!"
                 )
@@ -535,7 +536,7 @@ def ooc_cmd_peek(client, arg):
             ):
                 area = _area
                 break
-        if area == None:
+        if area is None:
             raise ClientError("Target area not found.")
         if area == client.area:
             ooc_cmd_getarea(client, "")
@@ -566,7 +567,7 @@ def ooc_cmd_peek(client, arg):
         else:
             sorted_clients = []
             for c in area.clients:
-                if not c.hidden and not c in area.owners and not c.is_mod:  # pure IC
+                if not c.hidden and c not in area.owners and not c.is_mod:  # pure IC
                     sorted_clients.append(c)
 
             _sort = [
