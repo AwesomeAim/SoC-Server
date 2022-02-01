@@ -181,9 +181,9 @@ def ooc_cmd_roll(client, arg):
 
     # Added by AwesomeAim (very funny ik)
     if roll == 69 or Sum == 69:
-        client.typo = true
+        client.typo = True
     if roll == 420 or Sum == 420:
-        client.formal = true
+        client.formal = True
 
     client.area.broadcast_ooc(
         f"{client.showname} rolled {roll} out of {chosen_max}."
