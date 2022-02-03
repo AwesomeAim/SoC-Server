@@ -1485,7 +1485,9 @@ class ClientManager:
             # then deal with them, and then remove trailing spaces
             # to make the sentence tidy and formal
             if len(message) < 1 or message.isspace():
-                return "I am an idiot." # I tried to be nice
+                return "*blankposts*"
+            elif 'http://' in message or 'https://' in message:
+                return message
             else:
                 def deacronym(z, strarray):
                     parts.pop(z)
@@ -1500,7 +1502,7 @@ class ClientManager:
                     else:
                         halves[1] = cut + halves[1]
                     deacronym(y, halves)
-        
+
                 # anti caps if more than a fourth of the characters are capitalised
                 quota = len(message) / 4
                 lst = list(message)
