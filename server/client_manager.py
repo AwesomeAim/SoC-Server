@@ -109,6 +109,7 @@ class ClientManager:
             # security stuff
             self.clientscon = 0
             self.gm_save_time = 0
+            self.last_demo_call = 0
 
             # movement system stuff
             self.last_move_time = 0
@@ -121,6 +122,7 @@ class ClientManager:
             self.sneaking = False
             self.listen_pos = None
             self.following = None
+            self.forced_to_follow = False
             self.edit_ambience = False
 
             # 0 = listen to NONE
@@ -150,6 +152,8 @@ class ClientManager:
             self.broadcast_list = []
             # Whether we're viewing hub list or not in the A/M area list
             self.viewing_hub_list = False
+            # Whether or not the client used the /showname command
+            self.used_showname_command = False
 
         def send_raw_message(self, msg):
             """
@@ -629,24 +633,24 @@ class ClientManager:
 
             self.area.area_manager.send_arup_players()
 
-            if self.viewing_hub_list:
-                for hub in self.server.hub_manager.hubs:
-                    count = 0
-                    for a in hub.areas:
-                        for c in a.clients:
-                            if not a.hide_clients and not c.hidden:
-                                count = count + 1
-                    hub.count = count
-                self.send_command(
-                    "FA",
-                    *[
-                        "{ Hubs }\n Double-Click me to see Areas\n  _______",
+            for hub in self.server.hub_manager.hubs:
+                count = 0
+                for c in hub.clients:
+                    if not c.area.hide_clients and not c.hidden:
+                        count = count + 1
+                hub.count = count
+            for c in self.server.client_manager.clients:
+                if c.viewing_hub_list:
+                    c.send_command(
+                        "FA",
                         *[
-                            f"[{hub.id}] {hub.name} (users: {hub.count})"
-                            for hub in self.server.hub_manager.hubs
+                            "{ Hubs }\n Double-Click me to see Areas\n  _______",
+                            *[
+                                f"[{hub.id}] {hub.name} (users: {hub.count})"
+                                for hub in self.server.hub_manager.hubs
+                            ],
                         ],
-                    ],
-                )
+                    )
 
             # Update everyone's available characters list
             # Commented out due to potentially causing clientside lag...
@@ -767,6 +771,9 @@ class ClientManager:
                 or area == area.area_manager.default_area()
             )
             if not allowed:
+                # If they're forced to follow, no escape.
+                if self.forced_to_follow and self.following is not None and self.following.area != area:
+                    raise ClientError("You can't escape when you've been forced to follow someone!")
                 try:
                     self.try_access_area(area)
                 except ClientError as ex:
@@ -866,6 +873,11 @@ class ClientManager:
             ):
                 if not old_area.dark and not old_area.force_sneak:
                     if old_area.area_manager == self.area.area_manager:
+                        if self.area.area_manager.passing_msg == True:
+                            old_area.send_ic(
+                                None, '1', 1, "", "", f'~~{"}}}"}[º{self.showname}º leaves to º{area.name}º.]', 
+                                "", "", 1, -1, 0, 0, [0], 0, 0, 0, "", -1, "", "", 0, 0, 0, 0, "0", 0, "", "", "", 0, ""
+                            )
                         for c in old_area.clients:
                             # Check if the GMs should really see this msg
                             if c in old_area.owners and c.remote_listen in [2, 3]:
@@ -907,6 +919,11 @@ class ClientManager:
                         f"[{self.id}] {self.showname} enters from [{old_area.id}] {old_area.name}{desc}",
                         "1",
                     )
+                    if self.area.area_manager.passing_msg == True:
+                        self.area.send_ic(
+                            None, '1', 1, "", "", f'~~{"}}}"}[º{self.showname}º enters from º{old_area.name}º.]', 
+                            "", "", 1, -1, 0, 0, [0], 0, 0, 0, "", -1, "", "", 0, 0, 0, 0, "0", 0, "", "", "", 0, ""
+                        )
                 else:
                     self.area.send_command(
                         "CT",
@@ -1782,6 +1799,24 @@ class ClientManager:
             if c.following == client:
                 c.unfollow()
         self.clients.remove(client)
+        for hub in self.server.hub_manager.hubs:
+            count = 0
+            for c in hub.clients:
+                if not c.area.hide_clients and not c.hidden:
+                    count = count + 1
+            hub.count = count
+        for c in self.server.client_manager.clients:
+            if c.viewing_hub_list:
+                c.send_command(
+                    "FA",
+                    *[
+                        "{ Hubs }\n Double-Click me to see Areas\n  _______",
+                        *[
+                            f"[{hub.id}] {hub.name} (users: {hub.count})"
+                            for hub in self.server.hub_manager.hubs
+                        ],
+                    ],
+                )
 
     def get_targets(self, client, key, value, local=False, single=False):
         """

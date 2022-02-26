@@ -102,6 +102,9 @@ class AOProtocol(asyncio.Protocol):
                 self.net_cmd_dispatcher[cmd](self, args)
             except KeyError:
                 logger_debug.debug(f"Unknown incoming message from {ipid}: {msg}")
+            except:
+                self.client.disconnect()
+                raise
 
     def connection_made(self, transport):
         """Called upon a new client connecting
@@ -717,7 +720,7 @@ class AOProtocol(asyncio.Protocol):
             return
         if color >= 12:
             return
-        if len(showname) > 15:
+        if len(showname) > 20:
             self.client.send_ooc("Your IC showname is way too long!")
             return
         if not self.client.is_mod and showname.lstrip().lower().startswith("[m"):
@@ -818,7 +821,7 @@ class AOProtocol(asyncio.Protocol):
                 else:
                     part = part[1:]
                     whisper_clients = [
-                        c for c in self.client.area.clients if c.pos == self.client.pos
+                        c for c in self.client.area.clients if c.pos == self.client.pos and not c == self.client
                     ]
                     clients = ""
                 text = " ".join(part)
@@ -870,6 +873,8 @@ class AOProtocol(asyncio.Protocol):
             )
             # target_area.trigger('present')
         # Update the showname ref for the client
+        if self.client.used_showname_command:
+            showname = self.client.showname
         self.client.showname = showname
 
         # Here, we check the pair stuff, and save info about it to the client.
@@ -1345,10 +1350,9 @@ class AOProtocol(asyncio.Protocol):
             self.client.send_command("FL", *preflist)
             for hub in self.client.server.hub_manager.hubs:
                 count = 0
-                for area in hub.areas:
-                    for c in area.clients:
-                        if not area.hide_clients and not c.hidden:
-                            count = count + 1
+                for c in hub.clients:
+                    if not c.area.hide_clients and not c.hidden:
+                        count = count + 1
                 hub.count = count
             self.client.send_command(
                 "FA",

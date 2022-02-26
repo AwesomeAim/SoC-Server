@@ -69,11 +69,12 @@ class Area:
             # Either the area or the hub was destroyed at some point
             if self.area == None or self == None:
                 return
-            self.area.broadcast_ooc(f"Timer {self.id+1} has expired.")
-            self.call_commands()
-            self.commands.clear()
+
             self.static = datetime.timedelta(0)
             self.started = False
+
+            self.area.broadcast_ooc(f"Timer {self.id+1} has expired.")
+            self.call_commands()
 
         def call_commands(self):
             if self.caller == None:
@@ -163,6 +164,8 @@ class Area:
         self.pos_dark = "wit"
         # The desc to set when the area's lights are turned off
         self.desc_dark = "It's pitch black in here, you can't see a thing!"
+        # Sends a message to the IC when changing areas
+        self.passing_msg = False
         # /prefs end
 
         # DR minigames
@@ -459,6 +462,8 @@ class Area:
             self.pos_dark = area["pos_dark"]
         if "desc_dark" in area:
             self.desc_dark = area["desc_dark"]
+        if 'passing_msg' in area:
+            self.passing_msg = area['passing_msg']
 
         if "evidence" in area and len(area["evidence"]) > 0:
             self.evi_list.evidences.clear()
@@ -560,6 +565,7 @@ class Area:
         area["background_dark"] = self.background_dark
         area["pos_dark"] = self.pos_dark
         area["desc_dark"] = self.desc_dark
+        area["passing_msg"] = self.passing_msg
         if len(self.evi_list.evidences) > 0:
             area["evidence"] = [e.to_dict() for e in self.evi_list.evidences]
         if len(self.links) > 0:
@@ -645,7 +651,8 @@ class Area:
                 if self.locked:
                     self.unlock()
         self.trigger("leave", client)
-        self.clients.remove(client)
+        if client in self.clients:
+            self.clients.remove(client)
         if client in self.afkers:
             self.afkers.remove(client)
             self.server.client_manager.toggle_afk(client)
@@ -1707,7 +1714,7 @@ class Area:
         if len(self.demo) <= 0:
             self.stop_demo()
             return
-
+    
         packet = self.demo.pop(0)
         header = packet[0]
         args = packet[1:]

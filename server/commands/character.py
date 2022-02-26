@@ -40,6 +40,7 @@ __all__ = [
     "ooc_cmd_narrate",
     "ooc_cmd_blankpost",
     "ooc_cmd_firstperson",
+    "ooc_cmd_showname",
 ]
 
 
@@ -638,17 +639,16 @@ def mod_keys(client, arg, mod=0):
             args = []
         keys = []
 
-        if mod in (1, 2):
-            keys = client.area.area_manager.get_character_data(target, "keys", [])
         for a in args:
             for key in a.split("-"):
                 # make sure all the keys are integers
                 key = int(key)
-            if not (a in keys):
-                if mod == 2:
-                    keys.remove(a)
-                else:
-                    keys.append(a)
+            if mod in (1, 2):
+                keys = client.area.area_manager.get_character_data(target, "keys", [])
+            if a in keys and mod == 2:
+                keys.remove(a)
+            elif not (a in keys):
+                keys.append(a)
         client.area.area_manager.set_character_data(target, "keys", keys)
         client.send_ooc(
             f"Character folder {client.server.char_list[target]}'s keys are updated: {keys}"
@@ -954,3 +954,28 @@ def ooc_cmd_firstperson(client, arg):
     if client.firstperson:
         stat = "be firstperson now"
     client.send_ooc(f"You will {stat}.")
+
+def ooc_cmd_showname(client, arg):
+    """
+    Set your own showname similar to the showname box in the client.
+    Note that using this command will override the showname box.
+    Passing no [name] will reset your showname and start using the showname box again.
+    Usage: /showname [name]
+    """
+    if len(arg) == 0:
+        client.used_showname_command = False
+        client.showname = ''
+        client.send_ooc("Your showname is now reset.")
+        return
+    # having to copy-paste code from aoprotocol is kinda poopy, need to create a set_showname def
+    if len(arg) > 20:
+        client.send_ooc("Your IC showname is way too long!")
+        return
+    if not client.is_mod and arg.lstrip().lower().startswith("[m"):
+        client.send_ooc(
+            "Nice try! You may not spoof [M] tag in your showname."
+        )
+        return
+    client.used_showname_command = True
+    client.showname = arg
+    client.send_ooc(f"You set your showname to '{client.showname}'.")
